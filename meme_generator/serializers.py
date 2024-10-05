@@ -2,6 +2,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
+from .utils import authenticate_user
+from rest_framework.exceptions import AuthenticationFailed
 
 class UserSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -60,3 +62,15 @@ class UserLogoutSerializer(serializers.Serializer):
             token.delete()
         except Token.DoesNotExist:
             raise serializers.ValidationError("Token not found for this user.")
+        
+class AuthenticateSerializer(serializers.Serializer):
+
+    def validate(self, attrs):
+        # Call the authenticate function with the request
+        request = self.context.get('request')
+        
+        try:
+            auth_response = authenticate_user(request)
+            return auth_response  # You can return the message if needed
+        except AuthenticationFailed as e:
+            raise serializers.ValidationError(str(e))  # Raise a validation error

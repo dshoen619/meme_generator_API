@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import UserSignupSerializer, UserLoginSerializer, UserLogoutSerializer
+from .serializers import UserSignupSerializer, UserLoginSerializer, UserLogoutSerializer, AuthenticateSerializer
 
 class UserSignupView(APIView):
     def post(self, request):
@@ -36,3 +36,12 @@ class UserLogoutView(APIView):
             return Response({"message": f"Successfully logged out user '{user.username}'."}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RetrieveMemeView(APIView):
+
+    def get(self,request, meme_id):
+        authenticate_serializer = AuthenticateSerializer(data=request.data, context={'request': request})
+        if not authenticate_serializer.is_valid():
+            return Response(authenticate_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response('authenticated')
