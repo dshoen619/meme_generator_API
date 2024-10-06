@@ -39,8 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'meme_generator',
     'rest_framework',
-     'rest_framework.authtoken'
+    'rest_framework.authtoken'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 2
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
