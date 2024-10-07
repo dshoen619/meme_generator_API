@@ -8,21 +8,31 @@ from .models import Meme, MemeTemplate, Rating
 
 class UserSignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    username = serializers.CharField(write_only=True)
+    email = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
         fields = ('username', 'email', 'password')
 
-    def create(self, validated_data):
+    def validate(self, attrs):
+        # Ensure all required fields are provided
+        if 'username' not in attrs:
+            raise serializers.ValidationError({"username": "This field is required."})
+        if 'email' not in attrs:
+            raise serializers.ValidationError({"email": "This field is required."})
+        if 'password' not in attrs:
+            raise serializers.ValidationError({"password": "This field is required."})
+        return attrs
 
-       # Check if a user with the same username already exists
+    def create(self, validated_data):
+        # Check if a user with the same username already exists
         if User.objects.filter(username=validated_data['username']).exists():
             raise serializers.ValidationError({"username": "A user with this username already exists."})
 
         # Check if a user with the same email already exists
         if User.objects.filter(email=validated_data['email']).exists():
             raise serializers.ValidationError({"email": "A user with this email already exists."})
-
 
         user = User(**validated_data)
         user.set_password(validated_data['password'])
