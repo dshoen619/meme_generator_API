@@ -210,7 +210,7 @@ class TopRatedMemesView(APIView):
           # Query to get the top 10 rated memes that have at least one rating
         top_memes = (
             Meme.objects
-            .annotate(avg_rating=Avg('ratings__score'))  # Calculate the average rating
+            .annotate(avg_rating=Avg('rating__score'))  # Calculate the average rating
             .filter(avg_rating__isnull=False)  # Only include memes with ratings
             .order_by('-avg_rating')[:10]  # Get the top 10 rated memes
         )

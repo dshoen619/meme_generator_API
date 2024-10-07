@@ -486,3 +486,132 @@ class RateMemeViewTestCase(APITestCase):
         # Optionally, you can also check that the old rating is no longer present
         # but since the update logic deletes it, we check only for the updated rating
         self.assertNotEqual(existing_rating.score, updated_rating.score)
+
+
+
+class RandomMemeViewTestCase(APITestCase):
+
+    def setUp(self):
+        # Create a user and authentication token
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.token = Token.objects.create(user=self.user)
+        
+        # Create a meme template
+        self.template = MemeTemplate.objects.create(
+            name="Funny Template",
+            image_url="http://example.com/image.png",
+            default_top_text="Default Top",
+            default_bottom_text="Default Bottom"
+        )
+        
+        # Create a meme
+        self.meme = Meme.objects.create(
+            template=self.template,
+            top_text="Top text for the meme",
+            bottom_text="Bottom text for the meme",
+            created_by=self.user
+        )
+        
+        # Prepare the URL and headers for the GET request
+        self.random_meme_url = '/api/memes/random/'  # Update the URL according to your routing
+        self.headers = {
+            'HTTP_Token': f'{self.token.key}',
+            'HTTP_Id': str(self.user.id),
+        }
+
+    def test_get_random_meme(self):
+        # Make the GET request to retrieve a random meme
+        response = self.client.get(self.random_meme_url, **self.headers)
+        
+        # Check that the response is successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that the response contains the correct meme data
+        self.assertIn('template', response.data)
+        self.assertIn('top_text', response.data)
+        self.assertIn('bottom_text', response.data)
+        self.assertEqual(response.data['top_text'], self.meme.top_text)
+        self.assertEqual(response.data['bottom_text'], self.meme.bottom_text)
+
+    def test_get_random_meme_no_memes(self):
+        # Delete the existing meme to simulate no memes in the database
+        Meme.objects.all().delete()
+
+        # Make the GET request to retrieve a random meme
+        response = self.client.get(self.random_meme_url, **self.headers)
+
+        # Check that the response indicates no memes found
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'No memes found.')
+
+
+
+class TopRatedMemesViewTestCase(APITestCase):
+
+
+    def setUp(self):
+        # Create a user and authentication token
+        self.user = User.objects.create_user(username='testuser', password='password')
+        user_2 = User.objects.create_user(username='otheruser', password='password')
+        self.token = Token.objects.create(user=self.user)
+
+        # Create a meme template
+        self.template = MemeTemplate.objects.create(
+            name="Funny Template",
+            image_url="http://example.com/image.png",
+            default_top_text="Default Top",
+            default_bottom_text="Default Bottom"
+        )
+
+        # Create some memes
+        self.meme1 = Meme.objects.create(
+            template=self.template,
+            top_text="Meme 1",
+            bottom_text="Bottom 1",
+            created_by=self.user
+        )
+        self.meme2 = Meme.objects.create(
+            template=self.template,
+            top_text="Meme 2",
+            bottom_text="Bottom 2",
+            created_by=self.user
+        )
+
+        # Create ratings for the memes
+        Rating.objects.create(meme=self.meme1, user=self.user, score=5)  # First rating
+        Rating.objects.create(meme=self.meme1, user=user_2, score=4)  # Rating by a different user
+        Rating.objects.create(meme=self.meme2, user=self.user, score=3)  # Rating for meme2
+
+        # Prepare the URL and headers for the GET request
+        self.top_memes_url = '/api/memes/top/'
+        self.headers = {
+            'HTTP_Token': f'{self.token.key}',
+            'HTTP_Id': str(self.user.id),
+        }
+
+    def test_get_top_rated_memes(self):
+        # Make the GET request to retrieve top rated memes
+        response = self.client.get(self.top_memes_url, **self.headers)
+
+        # Check that the response is successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check that the response contains the correct number of memes
+        self.assertEqual(len(response.data), 2)  # We created 2 memes
+
+        # Verify that the memes are returned with the correct average ratings
+        self.assertEqual(response.data[0]['id'], self.meme1.id)
+        self.assertAlmostEqual(response.data[0]['avg_rating'], 4.5)  # Average of 5 and 4
+        self.assertEqual(response.data[1]['id'], self.meme2.id)
+        self.assertAlmostEqual(response.data[1]['avg_rating'], 3.0)  # Single rating of 3
+
+    def test_get_top_rated_memes_no_ratings(self):
+        # Clear existing ratings to simulate no ratings for memes
+        Rating.objects.all().delete()
+
+        # Make the GET request to retrieve top rated memes
+        response = self.client.get(self.top_memes_url, **self.headers)
+
+        # Check that the response indicates no memes with ratings
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])  # Expecting an empty list since there are no ratings
