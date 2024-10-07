@@ -28,6 +28,7 @@ __docker-compose up__
   **Examples**
 
   1) POST /signup/
+  <br>
   header = None
   
   body = {
@@ -44,6 +45,7 @@ __docker-compose up__
    }
 
 2) POST /login/
+   <br>
    header = None
    
    body = {
@@ -62,6 +64,7 @@ __docker-compose up__
   Note: Authentication is performed by matching the id and the token in the requests header. If any request that requires authentication either does not have the appropriate headers or they are incorrect, will not be executed.
 
 3) GET /api/templates/
+   <br>
      header = {
 
               Token = <Token>
@@ -89,6 +92,7 @@ __docker-compose up__
 Note: These are the templates that are autopopulated when the server is first ran. You can also create new templates with POST /api/meme_template/create/
 
 3) POST /api/memes/
+   <br>
    header = {
 
               Token = <Token>
@@ -108,6 +112,7 @@ Note: These are the templates that are autopopulated when the server is first ra
 }
 
 3) GET /api/memes/
+   <br>
      header = {
 
               Token = <Token>
