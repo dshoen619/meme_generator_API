@@ -119,3 +119,50 @@ class UserLoginViewTest(APITestCase):
         response = self.client.post(self.login_url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn('username', response.data)
+
+
+class UserLogoutViewTest(APITestCase):
+    
+    def setUp(self):
+        # Create a test user and token
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.token = Token.objects.create(user=self.user)
+        self.logout_url = reverse('logout')
+
+    def test_user_logout_success(self):
+        """Test that a user can log out successfully."""
+        data = {
+            'username': 'testuser'
+        }
+        response = self.client.post(self.logout_url, data, HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], f"Successfully logged out user '{self.user.username}'.")
+        
+        # Check that the token has been deleted
+        token_exists = Token.objects.filter(user=self.user).exists()
+        self.assertFalse(token_exists)
+
+    def test_user_logout_invalid_user(self):
+        """Test that logging out fails when the user does not exist."""
+        data = {
+            'username': 'invaliduser'
+        }
+        response = self.client.post(self.logout_url, data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.data)
+        self.assertEqual(response.data['username'][0], "User not found.")
+
+    def test_user_logout_no_token(self):
+        """Test that logging out fails if the user has no token."""
+        # Manually delete the user's token
+        self.token.delete()
+        
+        data = {
+            'username': 'testuser'
+        }
+        response = self.client.post(self.logout_url, data, HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Token not found for this user.', response.data)
