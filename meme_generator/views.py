@@ -161,24 +161,22 @@ class RateMemeView(APIView):
         except Meme.DoesNotExist:
             return Response({'error': 'Meme not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Create the rating, passing meme and user in the serializer context
-        rate_serializer = RateMemeSerializer(data=request.data, context={'meme': meme, 'user': user})
-        if rate_serializer.is_valid():
-            try:
-                # Save the new rating with meme and user from the context
-                rating = rate_serializer.save()  # Only call save() without extra args
+        # Check if the user has already rated the meme
+        existing_rating = Rating.objects.filter(meme=meme, user=user).first()
+        if existing_rating:
+            # If the rating exists, update it
+            existing_rating.score = request.data.get('score')
+            existing_rating.save()
+            return Response({'id': existing_rating.id, 'message': 'Rating updated successfully!'}, status=status.HTTP_201_CREATED)
+        else:
+            # Create a new rating
+            rate_serializer = RateMemeSerializer(data=request.data, context={'meme': meme, 'user': user})
+            if rate_serializer.is_valid():
+                rating = rate_serializer.save()
                 return Response({'id': rating.id, 'message': 'Rating created successfully!'}, status=status.HTTP_201_CREATED)
-
-            except IntegrityError:
-                # If IntegrityError is raised, find and delete the existing rating
-                existing_rating = Rating.objects.get(meme=meme, user=user)
-                existing_rating.delete()
-
-                # Save the new rating after deletion
-                rating = rate_serializer.save()  # Call save() again
-                return Response({'id': rating.id, 'message': 'Rating updated successfully!'}, status=status.HTTP_201_CREATED)
-
+        
         return Response(rate_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class RandomMemeView(APIView):
     

@@ -19,7 +19,7 @@ class Rating(models.Model):
     meme = models.ForeignKey(Meme, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='meme_app_ratings')  # Add related_name here
     score = models.IntegerField()
-    rated_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('meme', 'user')

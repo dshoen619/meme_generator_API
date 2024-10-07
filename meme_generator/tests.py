@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
-from .models import Meme, MemeTemplate
+from .models import Meme, MemeTemplate, Rating
 
 
 class UserSignupViewTest(APITestCase):
@@ -358,3 +358,131 @@ class RetrieveMemeTest(APITestCase):
 
         # Assert that the response contains the appropriate error message
         self.assertEqual(response.data['error'], 'Meme not found.')
+
+class ReceiveAllTemplatesTest(APITestCase):
+
+    def setUp(self):
+        # Create a test user and authenticate
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_TOKEN=self.token.key, HTTP_ID=str(self.user.id))
+
+        # Create sample meme templates
+        MemeTemplate.objects.create(name="Template1", image_url="http://example.com/template1.jpg", 
+                                    default_top_text="Top Text 1", default_bottom_text="Bottom Text 1")
+        MemeTemplate.objects.create(name="Template2", image_url="http://example.com/template2.jpg", 
+                                    default_top_text="Top Text 2", default_bottom_text="Bottom Text 2")
+        
+        # Define the URL for retrieving all templates
+        self.url = reverse('receive_all_templates')
+
+    def test_receive_all_templates_success(self):
+        """Test successfully retrieving all meme templates."""
+        # Send GET request to retrieve all meme templates
+        response = self.client.get(self.url)
+
+        # Assert the response status code is 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Assert that the response contains 2 templates
+        self.assertEqual(len(response.data), 2)
+
+        # Verify the data for each template
+        template1 = response.data[0]
+        template2 = response.data[1]
+
+        self.assertEqual(template1['name'], 'Template1')
+        self.assertEqual(template1['image_url'], 'http://example.com/template1.jpg')
+        self.assertEqual(template1['default_top_text'], 'Top Text 1')
+        self.assertEqual(template1['default_bottom_text'], 'Bottom Text 1')
+
+        self.assertEqual(template2['name'], 'Template2')
+        self.assertEqual(template2['image_url'], 'http://example.com/template2.jpg')
+        self.assertEqual(template2['default_top_text'], 'Top Text 2')
+        self.assertEqual(template2['default_bottom_text'], 'Bottom Text 2')
+
+    def test_receive_no_templates(self):
+        """Test retrieving templates when no templates exist."""
+        # Clear the MemeTemplate objects
+        MemeTemplate.objects.all().delete()
+
+        # Send GET request to retrieve all meme templates
+        response = self.client.get(self.url)
+
+        # Assert that the response contains no templates
+        self.assertEqual(len(response.data), 0)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class RateMemeViewTestCase(APITestCase):
+
+    def setUp(self):
+        # Create a user and authentication token
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.token = Token.objects.create(user=self.user)
+        
+        # Create a meme template
+        self.template = MemeTemplate.objects.create(
+            name="Funny Template",
+            image_url="http://example.com/image.png",
+            default_top_text="Default Top",
+            default_bottom_text="Default Bottom"
+        )
+        
+        # Create a meme
+        self.meme = Meme.objects.create(
+            template=self.template,
+            top_text="Top text for the meme",
+            bottom_text="Bottom text for the meme",
+            created_by=self.user
+        )
+        
+        # Prepare the URL and headers for the POST request
+        self.meme_id = self.meme.id
+        self.rate_meme_url = f'/api/memes/{self.meme_id}/rate/'
+        self.headers = {
+            'HTTP_Token': f'{self.token.key}',
+            'HTTP_Id': str(self.user.id),
+        }
+        
+    def test_rate_meme(self):
+        # Prepare the rating data
+        data = {
+            'score': 5  # Assuming the score is an integer field
+        }
+
+        # Make the POST request to rate the meme
+        response = self.client.post(self.rate_meme_url, data,**self.headers )
+        print(response.data)
+
+        # Check that the response is successful
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Rating created successfully!')
+
+        # Check that the rating was created correctly
+        rating = Rating.objects.get(meme=self.meme, user=self.user)
+        self.assertEqual(rating.score, 5)
+
+    def test_rate_meme_update(self):
+        # Create an existing rating to simulate an update
+        existing_rating = Rating.objects.create(meme=self.meme, user=self.user, score=3)
+
+        # Prepare new rating data
+        data = {
+            'score': 4  # Update the score
+        }
+
+        # Make the POST request to update the rating
+        response = self.client.post(self.rate_meme_url, data, **self.headers)
+
+        # Check that the response is successful
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Rating updated successfully!')
+
+        # Check that the rating was updated
+        updated_rating = Rating.objects.get(meme=self.meme, user=self.user)
+        self.assertEqual(updated_rating.score, 4)
+
+        # Optionally, you can also check that the old rating is no longer present
+        # but since the update logic deletes it, we check only for the updated rating
+        self.assertNotEqual(existing_rating.score, updated_rating.score)

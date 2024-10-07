@@ -4,7 +4,7 @@ from rest_framework.exceptions import AuthenticationFailed
 def authenticate_user(request):
     """Validate the token against the user_id."""
     if request:
-        print(request.headers)
+        print('headers in authenticate',request.headers)
         token = request.headers.get('Token')
         user_id = request.headers.get('Id')
 
