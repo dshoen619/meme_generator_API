@@ -104,12 +104,16 @@ class MemeSerializer(serializers.ModelSerializer):
         top_text = validated_data.get('top_text', meme_template.default_top_text)
         bottom_text = validated_data.get('bottom_text', meme_template.default_bottom_text)
 
+        # Prevent duplicate values being passed to create
+        validated_data['top_text'] = top_text
+        validated_data['bottom_text'] = bottom_text
+
         # Create the Meme instance with the final values
         meme = Meme.objects.create(
             template=meme_template,
+            created_by=validated_data['created_by'],  # Ensure you pass the correct fields
             top_text=top_text,
-            bottom_text=bottom_text,
-            **validated_data
+            bottom_text=bottom_text
         )
         return meme
 

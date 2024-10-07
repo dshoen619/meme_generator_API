@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
+from .models import Meme, MemeTemplate
 
 
 class UserSignupViewTest(APITestCase):
@@ -166,3 +167,144 @@ class UserLogoutViewTest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Token not found for this user.', response.data)
+
+
+class MemeViewTest(APITestCase):
+
+    def setUp(self):
+        # Create a test user and token for authentication
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.token = Token.objects.create(user=self.user)
+
+        # Create a meme template for use in tests
+        self.template = MemeTemplate.objects.create(
+            name="Test Template",
+            default_top_text="Default Top",
+            default_bottom_text="Default Bottom"
+        )
+
+        # Set URL for the memes API
+        self.meme_url = reverse('meme_request')
+
+    def test_create_meme_success(self):
+        """Test that a meme can be created successfully."""
+        data = {
+            'template': self.template.id,
+            'top_text': 'Custom Top Text',
+            'bottom_text': 'Custom Bottom Text'
+        }
+        headers = {
+            'HTTP_TOKEN': self.token.key,
+            'HTTP_ID': str(self.user.id)
+        }
+
+        response = self.client.post(self.meme_url, data, **headers)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('id', response.data)
+        self.assertEqual(response.data['message'], 'Meme created successfully!')
+
+    def test_create_meme_missing_auth(self):
+        """Test that creating a meme fails when authentication headers are missing."""
+        data = {
+            'template': self.template.id,
+            'top_text': 'Custom Top Text',
+            'bottom_text': 'Custom Bottom Text'
+        }
+
+        response = self.client.post(self.meme_url, data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Token or user_id missing', response.data['non_field_errors'])
+    
+    def test_create_meme_invalid_template(self):
+        """Test that creating a meme fails if the template does not exist."""
+        data = {
+            'template': 999,  # Invalid template ID
+            'top_text': 'Custom Top Text',
+            'bottom_text': 'Custom Bottom Text'
+        }
+        headers = {
+            'HTTP_TOKEN': self.token.key,
+            'HTTP_ID': str(self.user.id)
+        }
+
+        response = self.client.post(self.meme_url, data, **headers)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('template', response.data)
+
+    def test_get_memes_success(self):
+        """Test that memes can be retrieved successfully with pagination."""
+        # Create a meme to test retrieval
+        Meme.objects.create(
+            template=self.template,
+            top_text='Custom Top Text',
+            bottom_text='Custom Bottom Text',
+            created_by=self.user
+        )
+
+        headers = {
+            'HTTP_TOKEN': self.token.key,
+            'HTTP_ID': str(self.user.id)
+        }
+
+        response = self.client.get(self.meme_url, **headers)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertGreaterEqual(len(response.data['results']), 1)
+
+    def test_get_memes_missing_auth(self):
+        """Test that retrieving memes fails when authentication headers are missing."""
+        
+        response = self.client.get(self.meme_url)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Token or user_id missing', response.data['non_field_errors'])
+
+class CreateMemeTemplateTest(APITestCase):
+    def setUp(self):
+        # Create a test user and authenticate
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_TOKEN=self.token.key, HTTP_ID=str(self.user.id))
+
+        # Define the URL for the meme template creation
+        self.url = reverse('create_meme_template')
+
+    def test_create_meme_template_success(self):
+        """Test creating a meme template successfully."""
+        data = {
+            "name": "Funny Meme Template",
+            "image_url": "http://example.com/meme.jpg",
+            "default_top_text": "Top Text",
+            "default_bottom_text": "Bottom Text"
+        }
+
+        # Send POST request to create a meme template
+        response = self.client.post(self.url, data)
+
+        # Assert that the response status code is 201 Created
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the meme template was created in the database
+        meme_template = MemeTemplate.objects.get(name="Funny Meme Template")
+        self.assertIsNotNone(meme_template)
+        self.assertEqual(meme_template.name, data['name'])
+
+    def test_create_meme_template_invalid_data(self):
+        """Test creating a meme template with invalid data."""
+        data = {
+            "name": "",
+            "image_url": "http://example.com/meme.jpg"
+        }
+
+        # Send POST request with invalid data
+        response = self.client.post(self.url, data)
+
+        # Assert that the response status code is 400 Bad Request
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Assert that the errors are returned in the response
+        self.assertIn('name', response.data)

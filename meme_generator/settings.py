@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'meme_generator',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+    'meme_app'
 ]
 
 REST_FRAMEWORK = {
