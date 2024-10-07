@@ -61,7 +61,7 @@ __docker-compose up__
     "token": "819f2583435daf55d4a15e4fa6afe46fe913396d"
 }
 
-  Note: Authentication is performed by matching the id and the token in the requests header. If any request that requires authentication either does not have the appropriate headers or they are incorrect, will not be executed.
+  Note: Authentication is performed by matching the id and the token in the requests header. If any request that requires authentication either does not have the appropriate headers or they are incorrect, it will not be executed.
 
 3) GET /api/templates/
    <br>
@@ -70,6 +70,7 @@ __docker-compose up__
               Token = <Token>
               Id = <Id>
      }
+   <br>
    body = None
 
    response =
@@ -86,20 +87,21 @@ __docker-compose up__
         "image_url": "https://example.com/template2.png",
         "default_top_text": "Default Top Text 2",
         "default_bottom_text": "Default Bottom Text 2"
-    }
-]```
+    }]```
 
 Note: These are the templates that are autopopulated when the server is first ran. You can also create new templates with POST /api/meme_template/create/
 
 3) POST /api/memes/
    <br>
-   header = {
+     header = {
 
               Token = <Token>
               Id = <Id>
      }
 
-   body = {
+  body =
+
+   {
 
     "template":"2",
     "image_url":"http://www.google.com"
@@ -107,13 +109,14 @@ Note: These are the templates that are autopopulated when the server is first ra
 }
 
   response = {
+  
     "id": 5,
     "message": "Meme created successfully!"
 }
 
 3) GET /api/memes/
    <br>
-     header = {
+     header ={
 
               Token = <Token>
               Id = <Id>
