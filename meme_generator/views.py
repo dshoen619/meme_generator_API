@@ -137,6 +137,7 @@ class ReceiveAllTemplatesView(APIView):
 
         # Query all templates from MemeTemplate table
         templates = MemeTemplate.objects.all()
+        print(templates)
 
         # Serialize the templates
         template_serializer = MemeTemplateSerializer(templates, many=True)

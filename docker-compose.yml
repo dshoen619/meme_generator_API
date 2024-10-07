@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_DB: memes
+      POSTGRES_USER: davidshoen
+      POSTGRES_PASSWORD: davidshoen
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    command: bash -c "python manage.py migrate && python manage.py populate_templates && python manage.py runserver 0.0.0.0:8000"
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://davidshoen:davidshoen@db:5432/memes
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
