@@ -308,3 +308,53 @@ class CreateMemeTemplateTest(APITestCase):
 
         # Assert that the errors are returned in the response
         self.assertIn('name', response.data)
+
+
+class RetrieveMemeTest(APITestCase):
+    def setUp(self):
+        # Create a test user and authenticate
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_TOKEN=self.token.key, HTTP_ID=str(self.user.id))
+
+        # Create a meme template
+        self.meme_template = MemeTemplate.objects.create(name="Template1", image_url="http://example.com/template.jpg")
+
+        # Create a meme
+        self.meme = Meme.objects.create(
+            template=self.meme_template,
+            top_text="Top",
+            bottom_text="Bottom",
+            created_by=self.user
+        )
+
+        # Define the URL for retrieving the specific meme
+        self.url = reverse('retrieve_meme', kwargs={'meme_id': self.meme.id})
+
+    def test_retrieve_meme_success(self):
+        """Test successfully retrieving a meme."""
+        # Send GET request to retrieve the meme
+        response = self.client.get(self.url)
+
+        # Assert that the response status code is 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Assert that the returned data matches the meme's fields
+        self.assertEqual(response.data['id'], self.meme.id)
+        self.assertEqual(response.data['top_text'], self.meme.top_text)
+        self.assertEqual(response.data['bottom_text'], self.meme.bottom_text)
+        self.assertEqual(response.data['template_id'], self.meme.template.id)
+
+    def test_retrieve_meme_not_found(self):
+        """Test retrieving a non-existing meme returns 404."""
+        # Define a URL with a non-existent meme_id
+        invalid_url = reverse('retrieve_meme', kwargs={'meme_id': 9999})
+
+        # Send GET request with invalid meme_id
+        response = self.client.get(invalid_url)
+
+        # Assert that the response status code is 404 Not Found
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Assert that the response contains the appropriate error message
+        self.assertEqual(response.data['error'], 'Meme not found.')
