@@ -9,7 +9,6 @@ from .models import Meme, MemeTemplate, Rating
 class UserSignupViewTest(APITestCase):
     
     def setUp(self):
-        # Any setup before running the tests can be done here
         self.signup_url = reverse('signup')
 
     def test_user_signup_success(self):

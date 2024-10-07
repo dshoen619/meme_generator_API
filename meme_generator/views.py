@@ -44,7 +44,7 @@ class UserLogoutView(APIView):
         
         if serializer.is_valid():
             user = serializer.validated_data['username']  # Retrieve the validated user
-            serializer.delete_token(user)  # Call the method to delete the token
+            serializer.delete_token(user)  
             
             return Response({"message": f"Successfully logged out user '{user.username}'."}, status=status.HTTP_200_OK)
         
@@ -58,7 +58,6 @@ class MemeView(APIView):
         if not authenticate_serializer.is_valid():
             return Response(authenticate_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create a serializer instance with the request data
         meme_serializer = MemeSerializer(data=request.data)
 
         # Validate and save the meme
